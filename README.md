@@ -150,3 +150,41 @@ Respect API rate limits, applicable terms of service, and the privacy of reposit
 ## Disclaimer
 
 GitGuard is intended for defensive security research, secret-exposure detection, and educational use. Findings must be validated responsibly. The tool is provided without a guarantee that all exposed secrets will be detected.
+
+
+## Persistent scan history (Phase 2)
+
+After a scan, GitGuard records scan-level metrics and normalized finding metadata in a local SQLite database at `data/gitguard.db`. The database is excluded from Git by `.gitignore`. Finding fingerprints are derived from repository, rule, category, and file path; raw secret values and Gitleaks `Secret`/`Match` fields are not stored. New/resolved/recurring comparisons are metadata-based and are not proof that a credential is valid or revoked.
+
+You can override the database path with `GITGUARD_DB_PATH=/path/to/gitguard.db`.
+
+The Streamlit dashboard reads JSON reports from the project-local `reports/` directory and includes persistent SQLite scan history once at least one scan has been recorded. After running a scan, refresh the dashboard page to load the newest report. Reports from a different checkout or directory are not automatically imported.
+
+```bash
+streamlit run dashboard.py
+```
+
+## Tests and CI
+
+Run the existing offline scanner regression suite and the SQLite history tests:
+
+```bash
+python src/main.py --self-test
+python -m unittest discover -s tests -v
+python -m py_compile src/main.py src/history.py dashboard.py
+```
+
+GitHub Actions runs these checks for pushes and pull requests targeting `main`.
+
+## Release and security checks
+
+Before publishing a release, run all offline checks locally and verify the GitHub Actions run is green. The CI workflow compiles the Python files, runs the offline scanner self-tests, and runs the SQLite history tests. The workflow does not perform a live GitHub scan.
+
+The SQLite database stores normalized metadata only and is ignored by Git. Keep local JSON/HTML scan reports out of public commits unless you have reviewed them for sensitive information.
+
+## Limitations
+
+- Risk scores are heuristic prioritization scores, not CVSS.
+- Finding correlation and lifecycle tracking are metadata-based approximations.
+- GitGuard scans public non-fork repositories and does not validate whether a detected credential remains active.
+- Gitleaks must be installed separately.

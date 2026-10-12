@@ -11,6 +11,8 @@ from urllib.parse import urlparse
 
 import requests
 
+from history import record_report
+
 
 ROOT = Path.home() / "GitGuard"
 REPOS_DIR = ROOT / "repos"
@@ -1349,15 +1351,26 @@ CVSS scores.
         encoding="utf-8",
     )
 
-    return {
+    completed_report = {
         **report,
-        "json_report": str(
-            json_path
-        ),
-        "html_report": str(
-            html_path
-        ),
+        "json_report": str(json_path),
+        "html_report": str(html_path),
     }
+    # Store only normalized finding metadata; raw secret values are never persisted.
+    try:
+        history_summary = record_report(
+            completed_report,
+            report_file=json_path.name,
+        )
+        completed_report["history"] = history_summary
+        # Keep the exported JSON aligned with the returned report, without secret values.
+        json_path.write_text(
+            json.dumps(completed_report, indent=2),
+            encoding="utf-8",
+        )
+    except (OSError, ValueError, TypeError) as exc:
+        print(f"Warning: scan history was not saved: {exc}", file=sys.stderr)
+    return completed_report
 
 
 def run_self_tests():

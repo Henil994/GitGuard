@@ -14,10 +14,10 @@ st.set_page_config(
 )
 
 st.title("🛡️ GitGuard Security Dashboard")
-st.caption("Secret exposure monitoring and historical scan reports")
+st.caption("Secret exposure monitoring, historical scan reports, and persistent scan trends")
+st.caption("Reports are loaded from the local reports/ folder on each refresh. Refresh the browser after a new scan.")
 
 
-@st.cache_data
 def load_reports():
     reports = []
     for path in sorted(REPORTS_DIR.glob("*.json")):
@@ -184,3 +184,23 @@ with st.expander("Limitations and safe use"):
         "approximate and cannot establish whether a credential is valid "
         "or revoked. Do not import raw reports containing secret values."
     )
+
+
+# Persistent scan history (Phase 2)
+st.divider()
+st.header("Persistent scan history")
+try:
+    import sys
+    if str(ROOT / "src") not in sys.path:
+        sys.path.insert(0, str(ROOT / "src"))
+    from history import history as load_history
+    historical_scans = load_history()
+    if historical_scans:
+        history_df = pd.DataFrame(historical_scans)
+        st.caption("SQLite stores normalized finding metadata only, never detected secret values.")
+        st.dataframe(history_df, width="stretch", hide_index=True)
+        st.line_chart(history_df.sort_values("id").set_index("generated_at_utc")[["potential_findings", "high_risk"]], width="stretch")
+    else:
+        st.info("No database history yet. Run a scan with `python src/main.py USERNAME` to record the first scan.")
+except (OSError, ValueError, RuntimeError) as exc:
+    st.warning(f"Could not load persistent scan history: {exc}")
