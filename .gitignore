@@ -1,0 +1,27 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+
+# Scan output and cloned repositories
+reports/
+repos/
+
+# Local secrets and temporary files
+*.key
+*.pem
+*.token
+.gitleaks-*.json
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+
+# Unidentified generated artifact
+/os
+
+
+# Local development backups
+src/main.py.phase*-backup
